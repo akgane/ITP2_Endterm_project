@@ -37,6 +37,11 @@ O_IMAGE = pygame.transform.scale(pygame.image.load(o_image_path), (80, 80))
 # Fonts
 END_FONT = pygame.font.SysFont('arial', 40)
 
+def draw_rect(cell):
+    x, y, _, _ = cell.getter()
+    gap = WIDTH // ROWS
+    half_gap = gap // 2
+    pygame.draw.rect(win, (0, 255, 0), (x - half_gap, y - half_gap, gap, gap), 3)
 
 def draw_grid():
     gap = WIDTH // ROWS
@@ -50,6 +55,8 @@ def draw_grid():
 
         pygame.draw.line(win, GRAY, (x, 0), (x, WIDTH), 3)
         pygame.draw.line(win, GRAY, (0, x), (WIDTH, x), 3)
+
+
 
 
 def initialize_grid():
@@ -69,11 +76,13 @@ def initialize_grid():
     return game_array
 
 
-def click(game_array):
+def click(game_array, pos):
     global x_turn, o_turn, images
 
     # Mouse position
     m_x, m_y = pygame.mouse.get_pos()
+    if pos is not None:
+        m_x, m_y, _, _ = game_array[pos[0]][pos[1]].getter()
 
     for i in range(len(game_array)):
         for j in range(len(game_array[i])):
@@ -143,16 +152,41 @@ def display_message(content):
     pygame.time.delay(3000)
 
 
-def render():
+def render(game_array, current_cell):
     if pygame.display.get_init():
         win.fill(WHITE)
         draw_grid()
+        draw_rect(game_array[current_cell[0]][current_cell[1]])
 
         for image in images:
             x, y, IMAGE = image
             win.blit(IMAGE, (x - IMAGE.get_width() // 2, y - IMAGE.get_height() // 2))
 
         pygame.display.update()
+
+
+def change_cell(event, current_cell):
+    if event.key == pygame.K_UP:
+        if current_cell[0] == 0:
+            return [2, current_cell[1]]
+        else:
+            return [current_cell[0] - 1, current_cell[1]]
+    elif event.key == pygame.K_DOWN:
+        if current_cell[0] == 2:
+            return [0, current_cell[1]]
+        else:
+            return [current_cell[0] + 1, current_cell[1]]
+    elif event.key == pygame.K_LEFT:
+        if current_cell[1] == 0:
+            return [current_cell[0], 2]
+        else:
+            return [current_cell[0], current_cell[1] - 1]
+    elif event.key == pygame.K_RIGHT:
+        if current_cell[1] == 2:
+            return [current_cell[0], 0]
+        else:
+            return [current_cell[0], current_cell[1] + 1]
+    return current_cell
 
 
 def main():
@@ -167,6 +201,7 @@ def main():
     o_turn = False
 
     game_array = initialize_grid()
+    current_cell = [0, 0]
 
     while run:
         for event in pygame.event.get():
@@ -174,9 +209,15 @@ def main():
                 pygame.quit()
                 return False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                click(game_array)
+                click(game_array, None)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    click(game_array, current_cell)
+                else:
+                    current_cell = change_cell(event, current_cell)
 
-        render()
+        render(game_array, current_cell)
+
 
         if has_won(game_array) or has_drawn(game_array):
             run = False
