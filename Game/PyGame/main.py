@@ -4,6 +4,7 @@ import os
 
 pygame.init()
 
+
 class Cell:
     def __init__(self, x, y, side, can_play):
         self.x = x
@@ -13,6 +14,7 @@ class Cell:
 
     def getter(self):
         return self.x, self.y, self.side, self.can_play
+
 
 # Screen
 WIDTH = 300
@@ -37,11 +39,13 @@ O_IMAGE = pygame.transform.scale(pygame.image.load(o_image_path), (80, 80))
 # Fonts
 END_FONT = pygame.font.SysFont('arial', 40)
 
+
 def draw_rect(cell):
     x, y, _, _ = cell.getter()
     gap = WIDTH // ROWS
     half_gap = gap // 2
     pygame.draw.rect(win, (0, 255, 0), (x - half_gap, y - half_gap, gap, gap), 3)
+
 
 def draw_grid():
     gap = WIDTH // ROWS
@@ -55,8 +59,6 @@ def draw_grid():
 
         pygame.draw.line(win, GRAY, (x, 0), (x, WIDTH), 3)
         pygame.draw.line(win, GRAY, (0, x), (WIDTH, x), 3)
-
-
 
 
 def initialize_grid():
@@ -110,13 +112,15 @@ def click(game_array, pos):
 def has_won(game_array):
     # Checking rows
     for row in range(len(game_array)):
-        if (game_array[row][0].side == game_array[row][1].side == game_array[row][2].side) and game_array[row][0].side != "":
+        if (game_array[row][0].side == game_array[row][1].side == game_array[row][2].side) and game_array[row][
+            0].side != "":
             display_message(game_array[row][0].side.upper() + " has won!")
             return True
 
     # Checking columns
     for col in range(len(game_array)):
-        if (game_array[0][col].side == game_array[1][col].side == game_array[2][col].side) and game_array[0][col].side != "":
+        if (game_array[0][col].side == game_array[1][col].side == game_array[2][col].side) and game_array[0][
+            col].side != "":
             display_message(game_array[0][col].side.upper() + " has won!")
             return True
 
@@ -133,6 +137,31 @@ def has_won(game_array):
     return False
 
 
+def has_won_minimax(game_array):
+    # for i in range(3):
+    #     for j in range(3):
+    #         print(game_array[i][j].side, end = ' ')
+    #     print("\n---\n")
+
+    for row in range(len(game_array)):
+        if (game_array[row][0].side == game_array[row][1].side == game_array[row][2].side) and game_array[row][
+            0].side != "":
+            return game_array[row][0].side
+
+    for col in range(len(game_array)):
+        if (game_array[0][col].side == game_array[1][col].side == game_array[2][col].side) and game_array[0][
+            col].side != "":
+            return game_array[0][col].side
+
+    if (game_array[0][0].side == game_array[1][1].side == game_array[2][2].side) and game_array[0][0].side != "":
+        return game_array[0][0].side
+
+    if (game_array[0][2].side == game_array[1][1].side == game_array[2][0].side) and game_array[0][2].side != "":
+        return game_array[0][2].side
+
+    return None
+
+
 def has_drawn(game_array):
     for i in range(len(game_array)):
         for j in range(len(game_array[i])):
@@ -142,6 +171,13 @@ def has_drawn(game_array):
     display_message("It's a draw!")
     return True
 
+def has_drawn_minimax(game_array):
+    for i in range(len(game_array)):
+        for j in range(len(game_array[i])):
+            if game_array[i][j].side == "":
+                return False
+
+    return True
 
 def display_message(content):
     pygame.time.delay(500)
@@ -188,6 +224,44 @@ def change_cell(event, current_cell):
             return [current_cell[0], current_cell[1] + 1]
     return current_cell
 
+def minimax(game_array, depth, is_maximizing):
+    winner = has_won_minimax(game_array)
+    if winner == 'x':
+        return 10 - depth, None
+    elif winner == 'o':
+        return depth - 10, None
+
+    if has_drawn_minimax(game_array):
+        return 0, None
+
+    if is_maximizing:
+        best_score = -float('inf')
+        best_move = None
+        for i in range(3):
+            for j in range(3):
+                if game_array[i][j].side == "":
+                    game_array[i][j].side = 'x'
+                    score, _ = minimax(game_array, depth + 1, False)
+                    game_array[i][j].side = ""
+                    if score > best_score:
+                        best_score = score
+                        best_move = (i, j)
+        return best_score, best_move
+    else:
+        best_score = float('inf')
+        best_move = None
+        for i in range(3):
+            for j in range(3):
+                if game_array[i][j].side == "":
+                    game_array[i][j].side = 'o'
+                    score, _ = minimax(game_array, depth + 1, True)
+                    game_array[i][j].side = ""
+                    if score < best_score:
+                        best_score = score
+                        best_move = (i, j)
+        return best_score, best_move
+
+
 
 def main():
     global x_turn, o_turn, images, draw
@@ -203,6 +277,8 @@ def main():
     game_array = initialize_grid()
     current_cell = [0, 0]
 
+    grid_changed = True
+
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -213,14 +289,20 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     click(game_array, current_cell)
+                    grid_changed = True
                 else:
                     current_cell = change_cell(event, current_cell)
 
-        render(game_array, current_cell)
+        if o_turn:
+            best_move = minimax(game_array, 10, o_turn)
+            click(game_array, best_move[1])
 
+        if grid_changed:
+            render(game_array, current_cell)
 
-        if has_won(game_array) or has_drawn(game_array):
-            run = False
+        if grid_changed:
+            if has_won(game_array) or has_drawn(game_array):
+                run = False
     return True
 
 
