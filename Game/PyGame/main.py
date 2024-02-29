@@ -138,11 +138,6 @@ def has_won(game_array):
 
 
 def has_won_minimax(game_array):
-    # for i in range(3):
-    #     for j in range(3):
-    #         print(game_array[i][j].side, end = ' ')
-    #     print("\n---\n")
-
     for row in range(len(game_array)):
         if (game_array[row][0].side == game_array[row][1].side == game_array[row][2].side) and game_array[row][
             0].side != "":
@@ -293,9 +288,11 @@ def main():
                 else:
                     current_cell = change_cell(event, current_cell)
 
-        if o_turn:
-            best_move = minimax(game_array, 10, o_turn)
-            click(game_array, best_move[1])
+        if bot_play:
+            if (o_turn and bot_o) or (x_turn and not bot_o):
+                best_move = minimax(game_array, 10, o_turn)
+                click(game_array, best_move[1])
+
 
         if grid_changed:
             render(game_array, current_cell)
@@ -307,6 +304,8 @@ def main():
 
 
 is_game = True
+bot_play = True
+bot_o = True
 while is_game:
     if __name__ == '__main__':
         is_game = main()
